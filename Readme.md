@@ -13,8 +13,8 @@ This is a Proof of Concept (PoC) application designed for medical researchers to
 - **Inline Citations**: Every claim cited with references like [1], [2], [3]
 - **Source Verification**: View 5-10 papers with title, authors, year, abstract, and links
 - **Follow-up Questions**: Ask 3-5 follow-up questions with context awareness
-- ** Real-time Streaming**: See answers appear in real-time as they're generated
-- ** Zero Hallucinations**: Answers based strictly on retrieved papers
+- **Real-time Streaming**: See answers appear in real-time as they're generated
+- **Zero Hallucinations**: Answers based strictly on retrieved papers
 
 ### Tech Stack
 
@@ -25,7 +25,7 @@ This is a Proof of Concept (PoC) application designed for medical researchers to
 - Pydantic for data validation
 - Python 3.10 (3.9+)
 
-**Frontend (React + TypeScript)**
+**Frontend (React + "TypeScript")**
 - React 18.2.0
 - TypeScript 5.2.2
 - Vite 5.0.8
@@ -38,7 +38,7 @@ This is a Proof of Concept (PoC) application designed for medical researchers to
 
 ## Prerequisites
  
-- **Python 3.9+**
+- **Python 3.10 (3.9+)**
 - **Node.js 18+** and npm/yarn
 - **OpenAI API Key** (get from https://platform.openai.com/)
 - **Email address** (required for PubMed API identification)
@@ -50,7 +50,7 @@ This is a Proof of Concept (PoC) application designed for medical researchers to
 
 ```bash
 git clone https://github.com/ddoyediran/atosprototype.git
-cd medical-research-chat
+cd atosprototype
 ```
 
 ### 2. Backend Setup
@@ -58,7 +58,7 @@ cd medical-research-chat
 cd backend
  
 # Create virtual environment
-python -m venv venv
+python3.10 -m venv venv # on Windows, I think 'py -3.10 -m venv venv'
 source venv/bin/activate  # On Windows: venv\Scripts\activate
  
 # Install dependencies
@@ -88,6 +88,28 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 Backend will be available at: http://localhost:8000
  
 API Documentation: http://localhost:8000/docs
+
+### 4. Frontend Setup
+ 
+```bash
+cd frontend
+ 
+# Install dependencies
+npm install
+ 
+# Configure environment
+# Create .env file with:
+echo "VITE_API_BASE_URL=http://localhost:8000" > .env
+```
+ 
+### 5. Run Frontend
+ 
+```bash
+# From frontend directory
+npm run dev
+```
+ 
+Frontend will be available at: http://localhost:5173
 
 ## Limitations (PoC)
  
