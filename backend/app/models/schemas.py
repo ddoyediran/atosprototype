@@ -1,0 +1,1 @@
+# Pydantic models that define exactly what data comes in and goes out
