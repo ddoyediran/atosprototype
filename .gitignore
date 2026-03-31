@@ -1,1 +1,21 @@
+# Python
+__pycache__/
+venv/
+
+# Node modules
+node_modules/
+
+# Testing
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+
+# IDEs
+.vscode/
+*~
+.DS_Store
+
+# Environment variables
 .env
