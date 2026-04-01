@@ -67,6 +67,9 @@ pip install -r requirements.txt
 # Configure environment
 cp .env.example .env
 # Edit .env and add your OpenAI API key and email
+
+# Test BioPython integration (Optional)
+python test_pubmed.py
 ```
 
 **Required Environment Variables:**
@@ -78,11 +81,12 @@ PUBMED_EMAIL=your.email@example.com
 ### 3. Run Backend
  
 ```bash
-# From backend directory
-python -m app.main
- 
+
 # Or using uvicorn directly
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# From backend directory
+# python app/main.py
 ```
  
 Backend will be available at: http://localhost:8000
