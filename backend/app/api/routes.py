@@ -119,6 +119,34 @@ async def chat_query(request: QueryRequest):
             detail=f"Failed to process query: {str(err)}"
         )
 
+@router.post("/chat/stream")
+async def chat_query_stream(request: QueryRequest):
+    """
+    Process a chat query and stream the response in real-time using SSE.
+    
+    Server-Sent Events (SSE) are used for streaming with the following event types:
+    - keywords: Extracted search keywords
+    - papers: Brief info about retrieved papers
+    - answer: Streaming answer chunks
+    - complete: Final paper details and citations
+    - error: Error information
+    - done: Stream completion signal
+    
+    Args:
+        request: Query request with question and optional conversation history
+        
+    Returns:
+        StreamingResponse with text/event-stream content type
+    """
+    return StreamingResponse(
+        _stream_response(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no", # Disable nginx buffering if used behind nginx
+        }
+    )
 
 
 # Helper functions
@@ -173,3 +201,14 @@ def _extract_citations_and_papers(answer: str, papers: list[Paper]) -> tuple[lis
         ]
     
     return cited_papers, citations
+
+async def _stream_response(request: QueryRequest) -> AsyncGenerator[str, None]:
+    """
+    Generator function for streaming chat responses via SSE.
+    
+    Yields Server-Sent Events formatted chunks.
+    """
+    try:
+        log.info(f"Starting stream for query: {request.query}")
+    except Exception as err:
+        pass
