@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     MAX_CONTEXT_TOKENS: int = 120000
     MAX_CONVERSATION_TURNS: int = 5
 
+    # Paper Full-text Configuration
+    FULL_TEXT_PAPER_LIMIT: int = 10
+    FULL_TEXT_TRUNCATION_CHARS: int = 10000
+
     class Config:
         env_file = ".env"
         case_sensitive = True
