@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 # Message and Conversation Models
@@ -8,7 +8,7 @@ class Message(BaseModel):
     """Single message in conversation history."""
     role: str = Field(..., description="Role: 'user' or 'assistant'")
     content: str = Field(..., description="Message content")
-    timestamp: datetime | None = Field(default_factory=datetime.timezone.utc)
+    timestamp: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @field_validator('role')
     @classmethod
@@ -144,11 +144,11 @@ class HealthCheckResponse(BaseModel):
     """Health check response."""
     status: str = Field(..., description="Service status")
     version: str = Field(..., description="API Version")
-    timestamp: datetime = Field(default_factory=datetime.timezone.utc) # timezone-aware timestamp
+    timestamp: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc)) # timezone-aware timestamp
 
 class ErrorResponse(BaseModel):
     """Error response model."""
     error: str = Field(..., description="Error type")
     message: str = Field(..., description="Error message")
     detail: dict | None = Field(None, description="Additional error details")
-    timestamp: datetime = Field(default_factory=datetime.timezone.utc) # timezone-aware timestamp
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc)) # timezone-aware timestamp
