@@ -185,7 +185,8 @@ class PubMedService:
             pmcid, pmid, doi = self._extract_ids(article)
             
             # Extract metadata
-            title = self._extract_text(article, './/front/article-meta/title-group/article-title') or "Untitled"
+            #title = self._extract_text(article, './/front/article-meta/title-group/article-title') or "Untitled"
+            title = self._extract_title(article)
             journal = self._extract_text(article, './/front/journal-meta/journal-title-group/journal-title')
             authors = self._extract_authors(article)
             year = self._extract_year(article)
@@ -193,6 +194,9 @@ class PubMedService:
             # Extract content
             abstract = self._extract_text(article, './/front/article-meta/abstract')
             full_text = self._extract_full_text(article)
+
+            # Extract abbreviations (for downstream features)
+            abbreviations = self._extract_abbreviations(article)
             
             # Build URL
             url = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/" if pmcid else None
@@ -207,7 +211,8 @@ class PubMedService:
                 abstract=abstract,
                 full_text=full_text,
                 doi=doi,
-                url=url
+                url=url,
+                abbreviations=abbreviations,
             )
             
         except Exception as e:
@@ -239,8 +244,12 @@ class PubMedService:
             if not text:
                 continue
                 
+            # if id_type in ('pmc', 'pmcid'):
+            #     pmcid = f"PMC{text}"
             if id_type in ('pmc', 'pmcid'):
-                pmcid = f"PMC{text}"
+                # Remove any existing PMC prefix to avoid duplication
+                text_clean = text.replace('PMC', '').strip()
+                pmcid = f"PMC{text_clean}"
             elif id_type == 'pmid':
                 pmid = text
             elif id_type == 'doi':
@@ -266,6 +275,52 @@ class PubMedService:
         if element := article.find(xpath):
             return "".join(element.itertext()).strip() or None
         return None
+    
+    def _extract_title(self, article: ET.Element) -> str:
+        """
+        Extract title with fallback strategies for different JATS formats.
+        
+        Newer JATS XML may wrap article-title content in inline elements like
+        <italic> or <sub>, so itertext() is used throughout. Tries multiple
+        common title locations in order of preference.
+
+        Args:
+            article (ET.Element): XML Element containing article metadata
+        
+        Returns:
+            Title of the paper, or "Untitled" if none found.
+        """
+        # 1. Standard JATS location
+        title = self._extract_text(
+            article, './/front/article-meta/title-group/article-title'
+        )
+
+        # 2. Without title-group wrapper (some older JATS versions)
+        if not title:
+            title = self._extract_text(
+                article, './/front/article-meta/article-title'
+            )
+        
+        # 3. Alternative title
+        if not title:
+            title = self._extract_text(
+                article, './/front/article-meta/title-group/alt-title'
+            )
+
+        # 4. Subtitle as last resort before giving up
+        if not title:
+            title = self._extract_text(
+                article, './/front/article-meta/title-group/subtitle'
+            )
+
+        # 5. Search anywhere in <front> for article-title
+        # Handles non-standard nesting
+        if not title:
+            el = article.find('.//front//article-title')
+            if el is not None:
+                title = "".join(el.itertext()).strip() or None
+
+        return title or "Untitled"
     
     def _extract_authors(self, article: ET.Element) -> List[str]:
         """
@@ -300,9 +355,15 @@ class PubMedService:
         """
         Extract publication year from the article's pub-date metadata.
         
-        Locates the <year> element within <pub-date> and attempts to parse
-        its text content as an integer. Handles missing or malformed values
-        gracefully.
+        Handles both legacy JATS (pub-type attribute) and modern JATS 1.2+
+        (date-type attribute) so that papers using either schema are covered.
+
+        Tries multiple date elements in order of preference:
+        1. Electronic publication date  (epub / epublish / electronic)
+        2. Print publication date       (ppub / print / collection)
+        3. Generic "pub" date-type      (common in modern JATS)
+        4. Any pub-date element         (catch-all fallback)
+        5. Copyright year               (last resort)
         
         Args:
             article (ET.Element): XML Element containing article metadata
@@ -311,14 +372,123 @@ class PubMedService:
             int | None: Publication year as integer, or None if not found or
                        if parsing fails
         """
-        if pub_date := article.find('.//front/article-meta/pub-date'):
-            if year_tag := pub_date.find('year'):
-                if year_tag.text:
+        # Helper: safely parse year text from a pub-date element
+        def _year_from(pub_date: ET.Element) -> int | None:
+            year_tag = pub_date.find('year')
+            if year_tag is not None and year_tag.text:
+                try:
+                    return int(year_tag.text.strip())
+                except ValueError:
+                    pass
+            return None
+
+        # Both legacy (pub-type) and modern JATS 1.2+ (date-type) are checked
+        # together so we don't need separate loops for each schema version.
+        EPUB_TYPES  = {'epub', 'epublish', 'electronic'}
+        PPUB_TYPES  = {'ppub', 'print', 'collection'}
+        PUB_TYPES   = {'pub'}  # modern JATS catch-all
+
+        epub_year = ppub_year = pub_year = any_year = None
+
+        #for pub_date in article.findall('..//front/article-meta/pub-date'):
+        for pub_date in article.findall('.//front/article-meta/pub-date'):
+            # Read whatever attribute is present (legacy vs modern JATS)
+            attr_val = (
+                pub_date.get('pub-type') or
+                pub_date.get('date-type') or
+                ''
+            ).lower()
+
+            y = _year_from(pub_date)
+            if y is None:
+                continue
+
+            if attr_val in EPUB_TYPES and epub_year is None:
+                epub_year = y
+            elif attr_val in PPUB_TYPES and ppub_year is None:
+                ppub_year = y
+            elif attr_val in PUB_TYPES and pub_year is None:
+                pub_year = y
+            elif any_year is None:
+                any_year = y # Catch-all: first pub-date with a year
+
+        # Return in priority order
+        year = epub_year or ppub_year or pub_year or any_year
+        if year:
+            return year
+
+        # Last resort: copyright year in permission block
+        if permissions := article.find('.//front/article-meta/permissions'):
+            if copyright_year := permissions.find('copyright-right'):
+                if copyright_year.text:
                     try:
-                        return int(year_tag.text)
+                        return int(copyright_year.text.strip())
                     except ValueError:
                         pass
+
         return None
+    
+    def _extract_abbreviations(self, article: ET.Element) -> dict[str, str]:
+        """
+        Extract abbreviation definitions from the article.
+
+        JATS XML stores abbreviations in <def-list> elements whose @list-type
+        attribute equals "abbrev", or inside <glossary> sections. Each entry
+        is a <def-item> with a <term> (the short form) and a <def> (the
+        expanded form).
+
+        Fallback: also scans <abbrev> inline elements that carry an explicit
+        <def> child, which some publishers use for in-text abbreviation markup.
+
+        Args:
+            article (ET.Element): Full article XML element.
+
+        Returns:
+            dict[str, str]: Mapping of abbreviation -> expansion,
+                            e.g. {"GLP-1": "Glucagon-like peptide-1"}.
+                            Empty dict if none found.
+        """
+        abbrevs: dict[str, str] = {}
+
+        # 1. <def-list list-type="abbrev"> anywhere in article
+        for def_list in article.findall('.//def-list'):
+            if def_list.get('list-type', '').lower() in ('abbrev', 'abbreviations', 'abbreviation'):
+                for def_item in def_list.findall('def-item'):
+                    term_el = def_item.find('term')
+                    def_el = def_item.find('def')
+                    if term_el is not None and def_el is not None:
+                        term = "".join(term_el.itertext()).strip()
+                        defn = "".join(def_el.itertext()).strip()
+                        if term and defn:
+                            abbrevs[term] = defn
+
+        # 2. <glossary> sections (some publishers use this)
+        for glossary in article.findall('.//glossary'):
+            for def_item in glossary.findall('.//def-item'):
+                term_el = def_item.find('term')
+                def_el = def_item.find('def')
+                if term_el is not None and def_el is not None:
+                    term = "".join(term_el.itertext()).strip()
+                    defn = "".join(def_el.itertext()).strip()
+                    if term and defn and term not in abbrevs:
+                        abbrevs[term] = defn
+
+        # 3. Inline <abbrev> elements with explicit <def> child
+        for abbrev_el in article.findall('.//abbrev'):
+            def_el = abbrev_el.find('def')
+            if def_el is not None:
+                term = "".join(abbrev_el.itertext()).strip()
+                # itertext on abbrev includes the def text; get only the
+                # abbrev's direct text to avoid duplication
+                term = abbrev_el.text.strip() if abbrev_el.text else term
+                defn = "".join(def_el.itertext()).strip()
+                if term and defn and term not in abbrevs:
+                    abbrevs[term] = defn
+
+        if abbrevs:
+            log.debug(f"Extracted {len(abbrevs)} abbreviations")
+
+        return abbrevs
     
     def _extract_full_text(self, article: ET.Element) -> str | None:
         """
