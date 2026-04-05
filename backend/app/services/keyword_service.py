@@ -49,7 +49,7 @@ class KeyWordExtractor:
         keywords.update(self._extract_acronyms(query))
 
         # 2. Extract hyphenated terms (e.g., T-cell, beta-blocker)
-        keywords.update(self._hyphenated_terms(query))
+        keywords.update(self._extract_hyphenated_terms(query))
 
         # 3. Extract regular words (filtered)
         keywords.update(self._extract_words(cleaned))
@@ -61,6 +61,7 @@ class KeyWordExtractor:
         for kw in keywords:
             kw_lower = kw.lower()
             if kw_lower not in seen:
+                unique_keywords.append(kw)
                 seen.add(kw_lower)
 
         # Limit to 10 keywords for optimal PubMed results

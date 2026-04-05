@@ -20,7 +20,7 @@ class OpenAIService:
         self.max_tokens = settings.OPENAI_MAX_TOKENS
         self.temperature = settings.OPENAI_TEMPERATURE
 
-    def build_context(self, papers: List[Paper], max_tokens: int = 1000) -> str:
+    def build_context(self, papers: List[Paper], max_tokens: int | None = None) -> str:
         """
         Build optimized context string from papers.
         
@@ -31,11 +31,18 @@ class OpenAIService:
         
         Args:
             papers: List of Paper objects
-            max_tokens: Maximum tokens for context
+            max_tokens: Maximum tokens for context. Defaults to
+                        settings.MAX_CONTEXT_TOKENS so the full configured
+                        budget is used when not overridden by callers.
             
         Returns:
             Formatted context string
         """
+        # Default to MAX_CONTEXT_TOKENS (configured as 120 000) so that
+        # callers that don't specify an override get the full budget.
+        if max_tokens is None:
+            max_tokens = settings.MAX_CONTEXT_TOKENS
+
         context_parts = []
         estimated_tokens = 0
 
@@ -130,6 +137,16 @@ class OpenAIService:
 
         **Clinical Applications**:
         GLP-1 receptor agonists are used in treating type 2 diabetes [4,5].
+        """
+
+    def _build_user_message(self, query: str, context: str) -> str:
+        """Build the user message with context and query."""
+        return f"""Papers to reference:
+        {context}
+
+        Question: {query}
+
+        Please answer the question based on the papers provided above. Remember to use inline citations.
         """
     
     def _build_user_prompt(self, query: str, context: str) -> str:

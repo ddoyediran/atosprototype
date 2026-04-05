@@ -78,6 +78,17 @@ class Paper(BaseModel):
     doi: str | None = Field(None, description="DOI identifier")
     url: str | None = Field(None, description="URL to full paper")
 
+    # Abbreviations map: short form -> expanded form
+    # e.g. {"GLP-1": "Glucagon-like peptide-1", "T2D": "Type 2 diabetes"}
+    # Populated by PubMedService._extract_abbreviations(); empty dict when none found.
+    abbreviations: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Abbreviations defined in the paper, as a mapping of "
+            "short form to expanded form (e.g. {'GLP-1': 'Glucagon-like peptide-1'})."
+        )
+    )
+
     def get_citation_text(self, index: int) -> str:
         """
         Generate formatted citation text for reference list.

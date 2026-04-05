@@ -148,6 +148,50 @@ async def chat_query_stream(request: QueryRequest):
         }
     )
 
+@router.get("/test/pubmed")
+async def test_pubmed_search(query: str = "What is GLP-1?"):
+    """
+    Test endpoint to verify PubMed integration.
+    
+    Useful for debugging and validating the PubMed service.
+    
+    Args:
+        query: Search term to test (default: "GLP-1")
+        
+    Returns:
+        Summary of papers found with basic metadata
+        
+    Raises:
+        HTTPException: 500 if PubMed service fails
+    """
+    try:
+        keywords = keyword_extractor.extract_keywords(query)
+        papers = await pubmed_service.search_papers(keywords)
+
+        return {
+            "query": query,
+            "keywords": keywords,
+            "papers_found": len(papers),
+            "papers": [
+                {
+                    "pmid": p.pmid,
+                    "title": p.title,
+                    "authors": p.authors[:3],
+                    "year": p.year,
+                    "has_abstract": bool(p.abstract),
+                    "has_full_text": bool(p.full_text),
+                    "url": p.url
+                }
+                for p in papers[:5] # Show first 5 papers
+            ]
+        }
+    except Exception as err:
+        log.error(f"Pubmed test failed: {str(err)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"PubMed test failed: {str(err)}"
+        )
+
 
 # Helper functions
 def _build_conversation_history(request: QueryRequest) -> list[dict] | None:
@@ -205,10 +249,94 @@ def _extract_citations_and_papers(answer: str, papers: list[Paper]) -> tuple[lis
 async def _stream_response(request: QueryRequest) -> AsyncGenerator[str, None]:
     """
     Generator function for streaming chat responses via SSE.
+
+    Args:
+        request (QueryRequest): Query request with question and optional conversation history
+
+    Returns:
+        AsyncGenerator[str, None]: Streaming response chunks.
     
     Yields Server-Sent Events formatted chunks.
     """
     try:
         log.info(f"Starting stream for query: {request.query}")
+
+        # Extract keywords
+        keywords = keyword_extractor.extract_keywords(request.query)
+
+        yield _sse_event("keywords", {"keywords": keywords})
+
+        # Search papers
+        papers = await pubmed_service.search_papers(keywords)
+
+        if not papers:
+            yield _sse_event("error", {"error": "No papers found for this query"})
+            return
+        
+        # Send paper preview
+        papers_preview = {
+            "count": len(papers),
+            "papers": [
+                {
+                    "pmid": p.pmid,
+                    "title": p.title,
+                    "authors": p.authors[:3],
+                    "year": p.year
+                }
+                for p in papers[:settings.FULL_TEXT_PAPER_LIMIT]
+            ]
+        }
+        yield _sse_event("papers", papers_preview)
+
+        # Build conversation history
+        conversation_history = _build_conversation_history(request)
+
+        # Stream answer
+        full_answer = ""
+        async for chunk in openai_service.generate_response_stream(
+            query=request.query,
+            papers=papers,
+            conversation_history=conversation_history
+        ):
+            full_answer += chunk
+            yield _sse_event("answer", {"chunk": chunk})
+
+        # Extract citations and prepare complete paper data
+        cited_papers, _ = _extract_citations_and_papers(full_answer, papers)
+
+        complete_papers = [
+            {
+                "pmid": p.pmid,
+                "pmc_id": p.pmc_id,
+                "title": p.title,
+                "authors": p.authors,
+                "journal": p.journal,
+                "year": p.year,
+                "abstract": p.abstract,
+                "doi": p.doi,
+                "url": p.url,
+                "citation": p.get_citation_text(idx + 1)
+            }
+            for idx, p in enumerate(cited_papers)
+        ]
+
+        yield _sse_event("complete", {"papers": complete_papers})
+        yield _sse_event("done", {})
+
     except Exception as err:
-        pass
+        log.error(f"Stream error: {str(err)}", exc_info=True)
+        yield _sse_event("error", {"error": str(err)})
+
+
+def _sse_event(event_type: str, data: dict) -> str:
+    """
+    Format data as Server-Sent Event.
+
+    Args:
+        event_type (str): Type of SSE event (e.g., 'papers', 'chunk', 'answer', 'error')
+        data (dict): Event data (will be JSON encoded)
+
+    Returns:
+        Formatted SSE string
+    """
+    return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
