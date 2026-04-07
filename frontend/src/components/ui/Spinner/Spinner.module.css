@@ -1,0 +1,9 @@
+.spinner {
+  animation: spin 0.75s linear infinite;
+  color: var(--color-primary-mid);
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

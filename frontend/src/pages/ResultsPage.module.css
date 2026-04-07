@@ -1,0 +1,55 @@
+.layout {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - var(--topbar-height));
+}
+
+.main {
+  flex: 1;
+  padding: var(--space-10) var(--space-10) var(--space-20);
+  min-width: 0; /* Prevents flex child overflow */
+}
+
+.query {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-black);
+  color: var(--color-on-surface);
+  line-height: var(--leading-tight);
+  margin-bottom: var(--space-5);
+  animation: fadeSlideIn var(--duration-slow) var(--ease-standard) both;
+}
+
+.followUpBadge {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-secondary);
+  background: var(--color-sec-container);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-4);
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: var(--space-6) var(--space-4) var(--space-16);
+  }
+
+  .query {
+    font-size: var(--text-2xl);
+  }
+}
