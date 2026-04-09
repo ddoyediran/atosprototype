@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
+    "dev": "node --experimental-global-webcrypto ./node_modules/.bin/vite",
+    "build": "node --experimental-global-webcrypto ./node_modules/.bin/vite build",
+    "preview": "node --experimental-global-webcrypto ./node_modules/.bin/vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
