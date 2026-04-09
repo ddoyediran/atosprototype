@@ -1,7 +1,9 @@
 .sidebar {
   width: var(--results-sidebar-w);
   min-width: var(--results-sidebar-w);
-  min-height: calc(100vh - var(--topbar-height));
+  height: calc(100vh - var(--topbar-height));
+  position: sticky;
+  top: var(--topbar-height);
   background: var(--color-surface-high);
   border-left: 1px solid rgba(192, 199, 209, 0.2);
   padding: var(--space-8) var(--space-5);
