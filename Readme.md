@@ -84,6 +84,7 @@ PUBMED_EMAIL=your.email@example.com
 
 # Or using uvicorn directly
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Wait for: "Application startup complete."
 
 # From backend directory
 # python app/main.py
@@ -102,8 +103,9 @@ cd frontend
 npm install
  
 # Configure environment
-# Create .env file with:
-echo "VITE_API_BASE_URL=http://localhost:8000" > .env
+Create .env file
+
+cp .env.example .env
 ```
  
 ### 5. Run Frontend

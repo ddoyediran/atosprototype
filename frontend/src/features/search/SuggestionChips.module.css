@@ -1,0 +1,28 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: center;
+  margin-top: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.label {
+  font-size: var(--text-sm);
+  color: #94a3b8;
+}
+
+.chip {
+  font-size: var(--text-sm);
+  color: var(--color-primary-mid);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: var(--weight-medium);
+  padding: var(--space-1) var(--space-1);
+  transition: opacity var(--duration-fast);
+}
+
+.chip:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,111 @@
+.card {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: var(--color-surface-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  animation: fadeSlideIn var(--duration-slow) var(--ease-standard) both;
+  transition: box-shadow var(--duration-fast);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-elevated);
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Index badge ──────────────────────────────────────────── */
+.indexBadge {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-on-primary);
+  background: var(--color-primary-mid);
+  min-width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── Body ─────────────────────────────────────────────────── */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* ── Title ────────────────────────────────────────────────── */
+.title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-on-surface);
+  line-height: var(--leading-snug);
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  text-decoration: none;
+}
+
+a.title:hover {
+  color: var(--color-primary-mid);
+  text-decoration: underline;
+}
+
+.extIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  opacity: 0.6;
+}
+
+/* ── Meta ─────────────────────────────────────────────────── */
+.meta {
+  font-size: var(--text-xs);
+  color: var(--color-on-surface-var);
+  line-height: var(--leading-normal);
+}
+
+/* ── Citation ─────────────────────────────────────────────── */
+.citation {
+  font-size: var(--text-xs);
+  color: var(--color-secondary);
+  font-style: italic;
+  line-height: var(--leading-normal);
+}
+
+/* ── Abstract ─────────────────────────────────────────────── */
+.abstract {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.abstractText {
+  font-size: var(--text-xs);
+  color: var(--color-on-surface-var);
+  line-height: var(--leading-relaxed);
+}
+
+.toggle {
+  align-self: flex-start;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary-mid);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity var(--duration-fast);
+}
+
+.toggle:hover {
+  opacity: 0.75;
+}
