@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 
+import capLogo from '@/assets/cap_logo.svg'
 import { Icon } from '@/components/ui/Icon/Icon'
 import { useResearchHistory } from '@/hooks/useResearchHistory'
 import { ROUTES } from '@/router/routes'
@@ -18,7 +19,7 @@ export function Sidebar() {
       {/* Brand */}
       <div className={styles.brand}>
         <div className={styles.logo}>
-          <Icon name="clinical" size={20} className={styles.logoIcon} />
+          <img src={capLogo} alt="CapMed-Sci logo" className={styles.logoImg} />
         </div>
         <div>
           <p className={styles.appName}>CapMed-Sci</p>
