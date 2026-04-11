@@ -65,7 +65,7 @@ class OpenAIService:
     
     def _format_paper_context(self, index: int, paper: Paper, include_full_text: bool = True) -> str:
         """
-        Format a single paper for context
+        Format a single paper for context with section-level citation support.
 
         Args:
             index: Paper index for labeling (e.g., [1], [2], etc.)
@@ -89,9 +89,18 @@ class OpenAIService:
         if paper.abstract:
             lines.append(f"Abstract: {paper.abstract}")
         
-        if include_full_text and paper.full_text:
-            # Truncate to 10k chars (approx. 2500 tokens)
-            full_text = paper.full_text[:settings.FULL_TEXT_TRUNCATION_CHARS] # I moved the 10000 to config so that it's easier to configure
+        # Format sections with visible headers for section-level citations
+        if include_full_text and paper.sections:
+            # If paper has structured sections, format each with [Section: Name] header
+            for section in paper.sections:
+                section_title = section.get("title", "Section")
+                section_content = section.get("content", "")
+                # Truncate each section to 5k chars to respect token budget
+                truncated_content = section_content[:5000]
+                lines.append(f"\n[Section: {section_title}]\n{truncated_content}")
+        elif include_full_text and paper.full_text:
+            # Fallback to merged full_text if no structured sections available
+            full_text = paper.full_text[:settings.FULL_TEXT_TRUNCATION_CHARS]
             lines.append(f"Full Text: {full_text}")
 
         return "\n".join(lines)
@@ -99,15 +108,17 @@ class OpenAIService:
     @staticmethod
     def build_system_prompt() -> str:
         """
-        Build the system prompt for LLM
+        Build the system prompt for LLM with section-level citation support.
         """
         return """You are a medical research assistant helping researchers understand scientific literature.
 
         Your task is to answer questions based ONLY on the provided research papers. Follow these rules strictly:
 
         1. CITATION REQUIREMENT:
-        - Cite every claim using inline citations in the format [1], [2], etc.
-        - Multiple citations can be combined: [1,2,3]
+        - Cite every claim using inline citations with section specification: [1: Methods], [1: Results], etc.
+        - Format is now [paper_number: SectionName] to cite specific sections within papers
+        - Multiple citations can be combined: [1: Methods], [5: Results]
+        - When papers lack sections, use basic format: [1], [2]
         - The citation number corresponds to the paper number in the context
         - DO NOT make claims without citations
 
@@ -130,13 +141,13 @@ class OpenAIService:
         - Keep paragraphs concise
 
         Example response format:
-        **Summary**: GLP-1 is a peptide hormone involved in glucose regulation [1,2].
+        **Summary**: GLP-1 is a peptide hormone involved in glucose regulation [1: Introduction, 2: Results].
 
         **Biological Mechanism**:
-        GLP-1 (glucagon-like peptide-1) is secreted by intestinal L-cells in response to food intake [1]. It enhances insulin secretion in a glucose-dependent manner [2,3].
+        GLP-1 (glucagon-like peptide-1) is secreted by intestinal L-cells in response to food intake [1: Methods]. It enhances insulin secretion in a glucose-dependent manner [2: Results, 3: Discussion].
 
         **Clinical Applications**:
-        GLP-1 receptor agonists are used in treating type 2 diabetes [4,5].
+        GLP-1 receptor agonists are used in treating type 2 diabetes [4: Conclusions, 5: Methods].
         """
 
     def _build_user_message(self, query: str, context: str) -> str:

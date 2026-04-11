@@ -74,6 +74,7 @@ class Paper(BaseModel):
     journal: str | None = Field(None, description="Journal name")
     year: int | None = Field(None, description="Publication year")
     abstract: str | None = Field(None, description="Paper abstract")
+    sections: List[dict] = Field(default_factory=list, description="Structured sections from paper body with 'title' and 'content' keys")
     full_text: str | None = Field(None, description="Full text if available")
     doi: str | None = Field(None, description="DOI identifier")
     url: str | None = Field(None, description="URL to full paper")
