@@ -93,10 +93,10 @@ class OpenAIService:
         if include_full_text and paper.sections:
             # If paper has structured sections, format each with [Section: Name] header
             for section in paper.sections:
-                section_title = section.get("title", "Section")
-                section_content = section.get("content", "")
+                section_title = section.title if section.title else  "Section"
+                section_content = section.content if section.content else ""
                 # Truncate each section to 5k chars to respect token budget
-                truncated_content = section_content[:5000]
+                truncated_content = section_content[:settings.SECTION_TRUNCATION_CHARS]
                 lines.append(f"\n[Section: {section_title}]\n{truncated_content}")
         elif include_full_text and paper.full_text:
             # Fallback to merged full_text if no structured sections available

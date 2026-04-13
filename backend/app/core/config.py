@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     # Paper Full-text Configuration
     FULL_TEXT_PAPER_LIMIT: int = 3 # 10
     FULL_TEXT_TRUNCATION_CHARS: int = 10000
+    SECTION_TRUNCATION_CHARS: int = 1500
 
     class Config:
         env_file = ".env"
