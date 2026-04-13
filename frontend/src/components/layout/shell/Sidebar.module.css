@@ -1,0 +1,160 @@
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--color-surface-high);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-8) var(--space-5);
+  border-right: 1px solid rgba(192, 199, 209, 0.2);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* ── Brand ────────────────────────────────────────────────── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  background: var(--color-primary-mid);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logoIcon {
+  color: var(--color-on-primary);
+}
+
+.appName {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-size: var(--text-md);
+  color: var(--color-primary-mid);
+  line-height: 1.2;
+}
+
+.appSub {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-on-surface-var);
+  font-weight: var(--weight-semibold);
+  margin-top: 2px;
+}
+
+/* ── New Analysis button ──────────────────────────────────── */
+.newBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--gradient-primary);
+  color: var(--color-on-primary);
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition: opacity var(--duration-fast);
+  width: 100%;
+}
+
+.newBtn:hover {
+  opacity: 0.9;
+}
+
+/* ── Navigation ───────────────────────────────────────────── */
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  color: var(--color-on-surface-var);
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background var(--duration-fast);
+}
+
+.navItem:hover {
+  background: rgba(0, 87, 135, 0.07);
+}
+
+.navItemActive {
+  color: var(--color-primary-mid);
+  background: var(--color-surface-low);
+  border-right: 3px solid var(--color-primary-mid);
+}
+
+/* ── History ──────────────────────────────────────────────── */
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  text-align: left;
+  width: 100%;
+  transition: background var(--duration-fast);
+}
+
+.historyItem:hover {
+  background: rgba(0, 87, 135, 0.06);
+}
+
+.historyDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  flex-shrink: 0;
+}
+
+.historyText {
+  font-size: var(--text-sm);
+  color: var(--color-on-surface-var);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sidebar {
+    display: none;
+  }
+}

@@ -39,7 +39,7 @@ This is a Proof of Concept (PoC) application designed for medical researchers to
 ## Prerequisites
  
 - **Python 3.10 (3.9+)**
-- **Node.js 18+** and npm/yarn
+- **Node.js 18+** (v18.18.2) and npm. You can use NVM (Node Version Manager) to install the right Nodejs version. [Check out nvm repo for setup](https://github.com/nvm-sh/nvm)  
 - **OpenAI API Key** (get from https://platform.openai.com/)
 - **Email address** (required for PubMed API identification)
 
@@ -69,7 +69,7 @@ cp .env.example .env
 # Edit .env and add your OpenAI API key and email
 
 # Test BioPython integration (Optional)
-python test_pubmed.py
+# python test_pubmed.py
 ```
 
 **Required Environment Variables:**
@@ -84,6 +84,7 @@ PUBMED_EMAIL=your.email@example.com
 
 # Or using uvicorn directly
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Wait for: "Application startup complete."
 
 # From backend directory
 # python app/main.py
@@ -102,8 +103,9 @@ cd frontend
 npm install
  
 # Configure environment
-# Create .env file with:
-echo "VITE_API_BASE_URL=http://localhost:8000" > .env
+Create .env file
+
+cp .env.example .env
 ```
  
 ### 5. Run Frontend
@@ -123,6 +125,10 @@ Frontend will be available at: http://localhost:5173
 4. **No Rate Limiting:** Unlimited requests (add in production)
 5. **No Analytics:** No usage tracking
 6. **PDF Export:** Not implemented in PoC
+
+## Contributions
+
+
 
 ## License
 

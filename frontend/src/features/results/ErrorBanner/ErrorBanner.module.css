@@ -1,0 +1,14 @@
+.banner {
+  background: var(--color-error-container);
+  color: var(--color-on-error-cont);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--text-base);
+  margin-bottom: var(--space-6);
+  animation: fadeIn var(--duration-normal) var(--ease-standard) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
