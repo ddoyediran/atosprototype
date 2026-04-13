@@ -34,13 +34,19 @@ export function renderMarkdown(text: string): string {
   html = html.replace(/`(.+?)`/g, '<code class="md-code">$1</code>')
 
   // ── Citation markers → chips ──────────────────────────────────────────────
-  // Matches [1], [2,3], [1,2,3] — renders each number as its own chip
-  html = html.replace(/\[(\d+(?:,\s*\d+)*)\]/g, (_match, nums: string) => {
-    return nums
-      .split(',')
-      .map((n) => `<sup class="citation-chip" data-citation="${n.trim()}">[${n.trim()}]</sup>`)
-      .join('')
-  })
+  // Matches [1: Abstract, 3: Background, 5: Abstract] — renders each entry as its own chip
+  html = html.replace(
+    /\[(\d+:\s*[^\],]+(?:,\s*\d+:\s*[^\],]+)*)\]/g,
+    (_match, inner: string) => {
+      const chips = inner.split(/,\s*(?=\d+:)/).map((entry) => {
+        const m = entry.match(/^(\d+):\s*(.+)$/)
+        if (!m) return entry
+        const [, num, section] = m
+        return `<span class="citation-chip" data-citation="${num}">${num}: ${section.trim()}</span>`
+      })
+      return `[${chips.join(', ')}]`
+    }
+  )
 
   // ── Unordered lists ───────────────────────────────────────────────────────
   // Collect consecutive list lines and wrap in <ul>

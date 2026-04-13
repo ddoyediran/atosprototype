@@ -11,13 +11,6 @@ interface AnswerPanelProps {
   status: StreamStatus
 }
 
-/**
- * Renders the streaming answer as formatted markdown.
- *
- * Memoised so it only re-renders when answerText or status changes —
- * not when parent components re-render for other reasons (e.g. sidebar
- * paper updates).
- */
 export const AnswerPanel = memo(function AnswerPanel({ answerText, status }: AnswerPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
