@@ -106,20 +106,29 @@ class OpenAIService:
         return "\n".join(lines)
     
     @staticmethod
-    def build_system_prompt() -> str:
+    def build_system_prompt(num_papers: int = 0) -> str:
         """
         Build the system prompt for LLM with section-level citation support.
+
+        Args:
+            num_papers: Number of papers provided in context, used to constrain citations.
         """
-        return """You are a medical research assistant helping researchers understand scientific literature.
+        paper_count_note = (
+            f"\n        IMPORTANT: You have been given exactly {num_papers} paper(s), numbered 1 through {num_papers}. "
+            f"Never cite a number outside this range.\n"
+            if num_papers > 0 else ""
+        )
+        return f"""You are a medical research assistant helping researchers understand scientific literature.
 
         Your task is to answer questions based ONLY on the provided research papers. Follow these rules strictly:
-
+{paper_count_note}
         1. CITATION REQUIREMENT:
-        - Cite every claim using inline citations with section specification: [1: Methods], [1: Results], etc.
-        - Format is now [paper_number: SectionName] to cite specific sections within papers
-        - Multiple citations can be combined: [1: Methods], [5: Results]
-        - When papers lack sections, use basic format: [1], [2]
+        - ALWAYS cite using the section format: [paper_number: SectionName], e.g. [1: Methods], [2: Results]
+        - If a paper has no named sections, use [1: Abstract] or [1: General] as appropriate
+        - Multiple citations can be combined: [1: Methods], [2: Results]
+        - NEVER use plain number-only citations like [1] or [2] — always include the section name
         - The citation number corresponds to the paper number in the context
+        - DO NOT cite paper numbers that were not provided to you
         - DO NOT make claims without citations
 
         2. ANSWER STRUCTURE:
@@ -140,14 +149,14 @@ class OpenAIService:
         - Use **bold** for key terms
         - Keep paragraphs concise
 
-        Example response format:
+        Example response format (assuming 3 papers were provided):
         **Summary**: GLP-1 is a peptide hormone involved in glucose regulation [1: Introduction, 2: Results].
 
         **Biological Mechanism**:
         GLP-1 (glucagon-like peptide-1) is secreted by intestinal L-cells in response to food intake [1: Methods]. It enhances insulin secretion in a glucose-dependent manner [2: Results, 3: Discussion].
 
         **Clinical Applications**:
-        GLP-1 receptor agonists are used in treating type 2 diabetes [4: Conclusions, 5: Methods].
+        GLP-1 receptor agonists are used in treating type 2 diabetes [3: Conclusions].
         """
 
     def _build_user_message(self, query: str, context: str) -> str:
@@ -199,7 +208,7 @@ class OpenAIService:
         try:
             # Build context and messages
             context = self.build_context(papers)
-            messages = self._build_messages(query, context, conversation_history)
+            messages = self._build_messages(query, context, conversation_history, num_papers=len(papers))
 
             # Stream response
             stream = await self.client.chat.completions.create(
@@ -237,7 +246,7 @@ class OpenAIService:
         try:
             # Build context and messages
             context = self.build_context(papers)
-            messages = self._build_messages(query, context, conversation_history)
+            messages = self._build_messages(query, context, conversation_history, num_papers=len(papers))
 
             # Get response
             response = await self.client.chat.completions.create(
@@ -255,23 +264,25 @@ class OpenAIService:
         
     def _build_messages(
         self,
-        query: str, 
-        context: str, 
-        conversation_history: list[dict] | None
+        query: str,
+        context: str,
+        conversation_history: list[dict] | None,
+        num_papers: int = 0
     ) -> list[dict]:
         """
         Build messages list for OpenAI API.
-        
+
         Args:
             query (str): User's question
-            context (str): Formatted context from papers 
+            context (str): Formatted context from papers
             conversation_history: Previous conversation messages
-            
+            num_papers: Number of papers in context, used to constrain citations
+
         Returns:
             List of messages for OpenAI API
         """
         messages = [
-            {"role": "system", "content": self.build_system_prompt()}
+            {"role": "system", "content": self.build_system_prompt(num_papers)}
         ]
 
         if conversation_history:
@@ -295,14 +306,14 @@ class OpenAIService:
         Returns:
             Sorted list of unique citation numbers
         """
-        # Match patterns: [1], [2,3], [1,2,3]
-        citation_pattern = r'\[(\d+(?:,\d+)*)\]'
+        # Match [1: Methods], [1: Some Section Name] — section format only.
+        # Also tolerates plain [1] as a fallback so extraction never silently breaks.
+        citation_pattern = r'\[(\d+)(?::[^\]]*)?\]'
         matches = re.findall(citation_pattern, response_text)
 
         # Extract and deduplicate numbers
         citations = set()
         for match in matches:
-            numbers = (int(n.strip()) for n in match.split(','))
-            citations.update(numbers)
+            citations.add(int(match))
 
         return sorted(citations)
