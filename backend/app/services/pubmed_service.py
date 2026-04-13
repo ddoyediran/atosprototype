@@ -193,7 +193,8 @@ class PubMedService:
             
             # Extract content
             abstract = self._extract_text(article, './/front/article-meta/abstract')
-            full_text = self._extract_full_text(article)
+            # Extract_full_text now returns (sections_list, merged_text) tuple
+            sections, full_text = self._extract_full_text(article)
 
             # Extract abbreviations (for downstream features)
             abbreviations = self._extract_abbreviations(article)
@@ -201,6 +202,7 @@ class PubMedService:
             # Build URL
             url = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/" if pmcid else None
             
+            # Pass extracted sections to Paper constructor citations
             return Paper(
                 pmid=pmid or pmcid or "Unknown",
                 pmc_id=pmcid,
@@ -209,6 +211,7 @@ class PubMedService:
                 journal=journal,
                 year=year,
                 abstract=abstract,
+                sections=sections,
                 full_text=full_text,
                 doi=doi,
                 url=url,
@@ -490,7 +493,7 @@ class PubMedService:
 
         return abbrevs
     
-    def _extract_full_text(self, article: ET.Element) -> str | None:
+    def _extract_full_text(self, article: ET.Element) -> tuple[list[dict], str | None]:
         """
         Extract and structure full-text content from the article body.
         
@@ -503,14 +506,17 @@ class PubMedService:
             article (ET.Element): XML Element containing the full article
             
         Returns:
-            str | None: Formatted full-text content with section headers,
-                       or None if no body or substantial sections found
+            tuple: (sections_list, merged_text) where:
+                - sections_list: List[dict] with {"title": str, "content": str} for each section
+                - merged_text: str | None: Merged full-text or or None if no body
         """
         body = article.find('.//body')
         if body is None:
-            return None
+            return [], None
         
-        sections = []
+        # Storing sections in structured format
+        sections_list = []
+        merged_sections = []
         
         for sec in body.findall('./sec'):
             # Extract section title
@@ -526,6 +532,8 @@ class PubMedService:
             
             # Only include substantial sections (>50 chars)
             if len(sec_text) > 50:
-                sections.append(f"{sec_title}: {sec_text}")
+                sections_list.append({"title": sec_title, "content": sec_text})
+                merged_sections.append(f"{sec_title}: {sec_text}")
         
-        return "\n\n".join(sections) if sections else None
+        merged_text = "\n\n".join(merged_sections) if merged_sections else None
+        return sections_list, merged_text

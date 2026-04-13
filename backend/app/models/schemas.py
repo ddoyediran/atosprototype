@@ -62,6 +62,10 @@ class QueryRequest(BaseModel):
             raise ValueError("Query cannot be empty or whitespace only")
         return v.strip()
 
+class PaperSection(BaseModel):
+    """Structured section of a paper."""
+    title: str = Field(..., description="Section title (e.g. 'Methods')")
+    content: str = Field(..., description="Section content")
 
 # Paper and Citation Models
 class Paper(BaseModel):
@@ -74,6 +78,7 @@ class Paper(BaseModel):
     journal: str | None = Field(None, description="Journal name")
     year: int | None = Field(None, description="Publication year")
     abstract: str | None = Field(None, description="Paper abstract")
+    sections: List[PaperSection] = Field(default_factory=list, description="Structured sections from paper body with 'title' and 'content' keys")
     full_text: str | None = Field(None, description="Full text if available")
     doi: str | None = Field(None, description="DOI identifier")
     url: str | None = Field(None, description="URL to full paper")
@@ -117,7 +122,6 @@ class Paper(BaseModel):
 
         return " ".join(parts)
     
-
 class Citation(BaseModel):
     """Citation reference in the response."""
 
