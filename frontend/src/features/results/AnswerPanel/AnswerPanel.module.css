@@ -70,17 +70,13 @@
 
 /* Citation chips — injected by renderMarkdown */
 .prose :global(.citation-chip) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline;
   background: var(--color-sec-container);
   color: var(--color-secondary);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: var(--weight-bold);
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: var(--radius-sm);
-  vertical-align: super;
-  line-height: 1;
   margin: 0 1px;
   cursor: default;
   letter-spacing: 0.01em;

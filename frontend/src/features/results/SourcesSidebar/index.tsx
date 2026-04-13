@@ -24,7 +24,6 @@ export function SourcesSidebar({ previews, completePapers, status }: SourcesSide
         {count > 0 && <span className={styles.badge}>{count}</span>}
       </div>
 
-      {/* Loading skeleton */}
       {isConnecting && (
         <div className={styles.skeletonList}>
           <SkeletonParagraph lines={4} />
@@ -33,7 +32,6 @@ export function SourcesSidebar({ previews, completePapers, status }: SourcesSide
         </div>
       )}
 
-      {/* Full paper cards once stream completes */}
       {!isConnecting && hasFull && (
         <div className={styles.list}>
           {completePapers.map((paper, idx) => (
@@ -42,7 +40,6 @@ export function SourcesSidebar({ previews, completePapers, status }: SourcesSide
         </div>
       )}
 
-      {/* Preview cards while streaming (title + authors only) */}
       {!isConnecting && !hasFull && previews.length > 0 && (
         <div className={styles.list}>
           {previews.map((preview, idx) => (
@@ -62,7 +59,6 @@ export function SourcesSidebar({ previews, completePapers, status }: SourcesSide
         </div>
       )}
 
-      {/* Empty state */}
       {!isConnecting && count === 0 && status !== 'idle' && (
         <p className={styles.empty}>No sources found.</p>
       )}
