@@ -1,6 +1,6 @@
 export { AnswerPanel } from './AnswerPanel'
 export { SourcesSidebar } from './SourcesSidebar'
 export { StatusBar } from './StatusBar'
-export { KeywordChips } from './KeywordChips'
+export { KeywordChips } from './Keywordchips'
 export { FollowUpBar } from './FollowUpBar'
 export { ErrorBanner } from './ErrorBanner'
