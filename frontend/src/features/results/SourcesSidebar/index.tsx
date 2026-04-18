@@ -34,8 +34,8 @@ export function SourcesSidebar({ previews, completePapers, status }: SourcesSide
 
       {!isConnecting && hasFull && (
         <div className={styles.list}>
-          {completePapers.map((paper, idx) => (
-            <SourceCard key={paper.pmid} paper={paper} index={idx + 1} />
+          {completePapers.map((paper) => (
+            <SourceCard key={paper.pmid} paper={paper} index={paper.index} />
           ))}
         </div>
       )}

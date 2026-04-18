@@ -302,7 +302,7 @@ async def _stream_response(request: QueryRequest) -> AsyncGenerator[str, None]:
             yield _sse_event("answer", {"chunk": chunk})
 
         # Extract citations and prepare complete paper data
-        cited_papers, _ = _extract_citations_and_papers(full_answer, papers)
+        cited_papers, citations = _extract_citations_and_papers(full_answer, papers)
 
         complete_papers = [
             {
@@ -315,9 +315,10 @@ async def _stream_response(request: QueryRequest) -> AsyncGenerator[str, None]:
                 "abstract": p.abstract,
                 "doi": p.doi,
                 "url": p.url,
-                "citation": p.get_citation_text(idx + 1)
+                "index": citations[i].index,
+                "citation": p.get_citation_text(citations[i].index)
             }
-            for idx, p in enumerate(cited_papers)
+            for i, p in enumerate(cited_papers)
         ]
 
         yield _sse_event("complete", {"papers": complete_papers})

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Pubmed Configuration
     PUBMED_EMAIL: str = "myemail.personal@example.com"
     PUBMED_TOOL: str = "capmed_sci_research_agent"
-    PUBMED_MAX_RESULTS: int = 20
+    PUBMED_MAX_RESULTS: int = 5
 
     # Application Settings
     APP_NAME: str = "CapMed-Sci"
