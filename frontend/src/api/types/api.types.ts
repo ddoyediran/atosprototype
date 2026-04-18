@@ -79,6 +79,7 @@ export interface SSECompleteEvent {
   data: {
     papers: Array<
       Pick<Paper, 'pmid' | 'pmc_id' | 'title' | 'authors' | 'journal' | 'year' | 'abstract' | 'doi' | 'url'> & {
+        index: number
         citation: string
       }
     >
