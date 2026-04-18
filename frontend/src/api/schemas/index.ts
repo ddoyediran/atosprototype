@@ -50,6 +50,7 @@ export const SSECompleteDataSchema = z.object({
       abstract: z.string().nullable(),
       doi: z.string().nullable(),
       url: z.string().nullable(),
+      index: z.number(),
       citation: z.string(),
     })
   ),
