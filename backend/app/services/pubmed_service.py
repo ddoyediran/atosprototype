@@ -196,8 +196,8 @@ class PubMedService:
             # Extract_full_text now returns (sections_list, merged_text) tuple
             sections, full_text = self._extract_full_text(article)
 
-            # Extract abbreviations (for downstream features)
-            abbreviations = self._extract_abbreviations(article)
+            # Extract abbreviations using already extracted full text.
+            abbreviations = self._extract_abbreviations(article, full_text)
             
             # Build URL
             url = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/" if pmcid else None
@@ -431,7 +431,78 @@ class PubMedService:
 
         return None
     
-    def _extract_abbreviations(self, article: ET.Element) -> dict[str, str]:
+    def _extract_long_form(self,candidate: str, acronym: str) -> str | None:
+            """
+            Extract and validate a minimal long form using backward character
+            alignment (Schwartz-Hearst style) from text before (ABBR).
+            """
+            text = candidate.strip().rstrip(" ,;:-")
+            short = "".join(ch for ch in acronym.upper() if ch.isalnum())
+            if not text or len(short) < 2:
+                return None
+
+            short_idx = len(short) - 1
+            first_match_idx = -1
+
+            for text_idx in range(len(text) - 1, -1, -1):
+                ch = text[text_idx]
+                if not ch.isalnum():
+                    continue
+                if ch.upper() == short[short_idx]:
+                    # If a match is in the middle of a token, anchor it to the
+                    # previous acronym letter via the token's first character.
+                    token_start = text_idx
+                    while token_start > 0 and text[token_start - 1].isalnum():
+                        token_start -= 1
+                    in_middle_of_token = token_start < text_idx
+                    if in_middle_of_token and short_idx > 0:
+                        if text[token_start].upper() != short[short_idx - 1]:
+                            continue
+
+                    if short_idx == 0:
+                        first_match_idx = text_idx
+                        break
+                    short_idx -= 1
+
+            if first_match_idx < 0:
+                return None
+
+            # Expand to full token containing the first matched character.
+            start = first_match_idx
+            while start > 0 and text[start - 1].isalnum():
+                start -= 1
+
+            long_form = text[start:].strip(" ,;:-")
+            if not long_form:
+                return None
+
+            if "\n" in long_form:
+                return None
+
+            words = re.findall(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*", long_form)
+            if len(words) < 2 or len(words) > 8:
+                return None
+
+            short = "".join(ch for ch in acronym.upper() if ch.isalnum())
+            first_alpha = next((ch.upper() for ch in long_form if ch.isalpha()), None)
+            if not first_alpha or first_alpha != short[0]:
+                return None
+
+            if len(long_form) <= len(acronym) or len(long_form) <= 3:
+                return None
+
+            last_word = re.findall(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*", long_form)
+            if not last_word:
+                return None
+
+            last_word_text = last_word[-1]
+            last_letter = short[-1]
+            if last_letter not in last_word_text.upper():
+                return None
+
+            return long_form
+
+    def _extract_abbreviations(self, article: ET.Element, full_text: str | None = None) -> dict[str, str]:
         """
         Extract abbreviation definitions from the article.
 
@@ -445,6 +516,7 @@ class PubMedService:
 
         Args:
             article (ET.Element): Full article XML element.
+            full_text (str | None): Pre-extracted merged body text.
 
         Returns:
             dict[str, str]: Mapping of abbreviation -> expansion,
@@ -488,10 +560,68 @@ class PubMedService:
                 if term and defn and term not in abbrevs:
                     abbrevs[term] = defn
 
+        # 4. Pattern matching in full text for phrases like "Full phrase (ABBR)" or "Full phrase(ABBR)"
+        # Use abstract and full_text to find acronyms that follow common patterns.
+        all_text_parts = []
+
+        # Keep abstract text in regex input (full-text sections exclude abstract).
+        if abstract_el := article.find('.//front/article-meta/abstract'):
+            abstract_title_el = abstract_el.find('./title')
+            abstract_title = "".join(abstract_title_el.itertext()).strip() if abstract_title_el is not None else ""
+
+            abstract_paras = []
+            for p in abstract_el.findall('.//p'):
+                p_text = "".join(p.itertext()).strip()
+                if p_text:
+                    abstract_paras.append(p_text)
+
+            if abstract_paras:
+                abstract_body = "\n".join(abstract_paras)
+                if abstract_title:
+                    all_text_parts.append(f"{abstract_title}:\n{abstract_body}")
+                else:
+                    all_text_parts.append(abstract_body)
+            elif abstract_title:
+                all_text_parts.append(abstract_title)
+
+        # Reuse already extracted full_text to avoid duplicate section traversal.
+        if full_text:
+            all_text_parts.append(full_text)
+
+        all_text = "\n\n".join(all_text_parts)
+        
+        # Match patterns: "Full phrase (ABBR)" or "Full phrase(ABBR)"
+        # Group 1: Full form (words separated by spaces, starts with capital)
+        # Group 2: Abbreviation (capitals, numbers, hyphens)
+        # Limited to single lines to avoid capturing across paragraphs/sections
+        pattern = r'([A-Z0-9][A-Za-z0-9\s\-/,]{2,100}?)\s*\(([A-Z][A-Z0-9\-]*[A-Z0-9]?)\)'
+        
+        # Track which abbreviations we've already found - only accept FIRST match for each abbr
+        found_abbrs = set()
+        
+        for match in re.finditer(pattern, all_text):
+            candidate_full_form = match.group(1).strip()
+            abbr = match.group(2).strip().upper()
+
+            # Skip if we've already found this abbreviation (first match wins)
+            if abbr in found_abbrs or abbr in abbrevs:
+                continue
+
+            # Recover a minimal long form nearest the parentheses.
+            full_form = self._extract_long_form(candidate_full_form, abbr)
+            if not full_form:
+                continue
+
+            # Only add if abbreviation is 2+ characters
+            if len(abbr) >= 2:
+                abbrevs[abbr] = full_form
+                found_abbrs.add(abbr)
+
         if abbrevs:
             log.debug(f"Extracted {len(abbrevs)} abbreviations")
 
         return abbrevs
+
     
     def _extract_full_text(self, article: ET.Element) -> tuple[list[dict], str | None]:
         """
