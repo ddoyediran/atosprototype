@@ -484,8 +484,8 @@ class PubMedService:
                 return None
 
             short = "".join(ch for ch in acronym.upper() if ch.isalnum())
-            first_alpha = next((ch.upper() for ch in long_form if ch.isalpha()), None)
-            if not first_alpha or first_alpha != short[0]:
+            first_alnum = next((ch.upper() for ch in long_form if ch.isalnum()), None)
+            if not first_alnum or first_alnum != short[0]:
                 return None
 
             if len(long_form) <= len(acronym) or len(long_form) <= 3:
@@ -594,7 +594,7 @@ class PubMedService:
         # Group 1: Full form (words separated by spaces, starts with capital)
         # Group 2: Abbreviation (capitals, numbers, hyphens)
         # Limited to single lines to avoid capturing across paragraphs/sections
-        pattern = r'([A-Z0-9][A-Za-z0-9\s\-/,]{2,100}?)\s*\(([A-Z][A-Z0-9\-]*[A-Z0-9]?)\)'
+        pattern = r'([A-Z0-9][A-Za-z0-9\s\-/,]{2,100}?)\s*\(([A-Z0-9][A-Z0-9\-]*[A-Z0-9]?)\)'
         
         # Track which abbreviations we've already found - only accept FIRST match for each abbr
         found_abbrs = set()
