@@ -11,6 +11,7 @@ import {
   ErrorBanner,
 } from '@/features/results'
 import { useChatStream } from '@/hooks/streaming/useChatStream'
+import { useAbbreviationBank } from '@/hooks/useAbbreviationBank'
 import { useConversation } from '@/hooks/useConversation'
 import { useResearchHistory } from '@/hooks/useResearchHistory'
 import { generateSessionId } from '@/utils/citations'
@@ -30,6 +31,7 @@ export default function ResultsPage() {
   const { state: streamState, answerText, startStream, reset } = useChatStream()
   const { conversationHistory, addTurn, clearHistory, isFollowUp } = useConversation()
   const { addEntry } = useResearchHistory()
+  const { setBank, clearBank } = useAbbreviationBank()
 
   // The query comes from navigation state (set by HomePage or Sidebar history click).
   // conversationHistory is also passed via state on follow-up navigations.
@@ -47,11 +49,15 @@ export default function ResultsPage() {
       return
     }
 
+    clearBank()
     currentQueryRef.current = initialQuery
     reset()
     clearHistory()
     // Pass conversation history from navigation state so follow-ups have context
     startStream(initialQuery, initialHistory)
+    return () => {
+      clearBank()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
@@ -60,6 +66,8 @@ export default function ResultsPage() {
     if (streamState.status !== 'done') return
     if (!currentQueryRef.current || !answerText) return
 
+    setBank(streamState.abbreviationBank)
+
     addEntry({
       id: sessionId ?? generateSessionId(),
       query: currentQueryRef.current,
@@ -67,7 +75,15 @@ export default function ResultsPage() {
       papers: streamState.completePapers,
       timestamp: Date.now(),
     })
-  }, [streamState.status]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    answerText,
+    addEntry,
+    sessionId,
+    setBank,
+    streamState.abbreviationBank,
+    streamState.completePapers,
+    streamState.status,
+  ])
 
   // ── Follow-up handler ──────────────────────────────────────────────────────
   const handleFollowUp = (followUpQuery: string) => {

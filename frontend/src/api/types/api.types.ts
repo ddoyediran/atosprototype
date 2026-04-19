@@ -32,6 +32,19 @@ export interface Paper {
   abbreviations: Record<string, string>
 }
 
+export interface AbbreviationPaperRef {
+  paper_index: number
+  pmid: string
+  paper_title: string
+}
+
+export interface AbbreviationMeaning {
+  full_form: string
+  papers: AbbreviationPaperRef[]
+}
+
+export type AbbreviationBank = Record<string, AbbreviationMeaning[]>
+
 export interface Citation {
   index: number
   pmid: string
@@ -42,6 +55,7 @@ export interface QueryResponse {
   answer: string
   papers: Paper[]
   citations: Citation[]
+  abbreviation_bank: AbbreviationBank
   is_follow_up: boolean
   papers_reused: boolean
   processing_time_ms: number | null
@@ -83,6 +97,7 @@ export interface SSECompleteEvent {
         citation: string
       }
     >
+    abbreviation_bank: AbbreviationBank
   }
 }
 

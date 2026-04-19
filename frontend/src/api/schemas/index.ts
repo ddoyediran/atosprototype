@@ -16,6 +16,19 @@ export const PaperSchema = z.object({
   abbreviations: z.record(z.string()),
 })
 
+export const AbbreviationPaperRefSchema = z.object({
+  paper_index: z.number(),
+  pmid: z.string(),
+  paper_title: z.string(),
+})
+
+export const AbbreviationMeaningSchema = z.object({
+  full_form: z.string(),
+  papers: z.array(AbbreviationPaperRefSchema),
+})
+
+export const AbbreviationBankSchema = z.record(z.array(AbbreviationMeaningSchema))
+
 // ─── SSE event payloads ───────────────────────────────────────────────────────
 
 export const SSEKeywordsDataSchema = z.object({
@@ -54,6 +67,7 @@ export const SSECompleteDataSchema = z.object({
       citation: z.string(),
     })
   ),
+  abbreviation_bank: AbbreviationBankSchema,
 })
 
 export const SSEErrorDataSchema = z.object({

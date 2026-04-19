@@ -105,7 +105,13 @@ export function useChatStream(): UseChatStreamReturn {
               stopBatching()
               const parsed = SSECompleteDataSchema.safeParse(data)
               if (parsed.success) {
-                dispatch({ type: 'COMPLETE', payload: parsed.data.papers })
+                dispatch({
+                  type: 'COMPLETE',
+                  payload: {
+                    papers: parsed.data.papers,
+                    abbreviationBank: parsed.data.abbreviation_bank,
+                  },
+                })
               }
               break
             }

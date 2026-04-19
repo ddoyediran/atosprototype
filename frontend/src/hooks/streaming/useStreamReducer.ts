@@ -1,4 +1,4 @@
-import type { CompletePaper, PaperPreview } from '@/api/types/api.types'
+import type { AbbreviationBank, CompletePaper, PaperPreview } from '@/api/types/api.types'
 
 // ─── States ───────────────────────────────────────────────────────────────────
 // Valid transitions:
@@ -15,6 +15,7 @@ export interface StreamState {
   paperPreviews: PaperPreview[]
   answerChunks: string[]
   completePapers: CompletePaper[]
+  abbreviationBank: AbbreviationBank
   error: string | null
 }
 
@@ -24,6 +25,7 @@ export const INITIAL_STREAM_STATE: StreamState = {
   paperPreviews: [],
   answerChunks: [],
   completePapers: [],
+  abbreviationBank: {},
   error: null,
 }
 
@@ -34,7 +36,7 @@ export type StreamAction =
   | { type: 'KEYWORDS'; payload: string[] }
   | { type: 'PAPERS'; payload: PaperPreview[] }
   | { type: 'CHUNK'; payload: string }
-  | { type: 'COMPLETE'; payload: CompletePaper[] }
+  | { type: 'COMPLETE'; payload: { papers: CompletePaper[]; abbreviationBank: AbbreviationBank } }
   | { type: 'ERROR'; payload: string }
   | { type: 'RESET' }
 
@@ -59,7 +61,12 @@ export function streamReducer(state: StreamState, action: StreamAction): StreamS
       return { ...state, answerChunks: [...state.answerChunks, action.payload] }
 
     case 'COMPLETE':
-      return { ...state, status: 'done', completePapers: action.payload }
+      return {
+        ...state,
+        status: 'done',
+        completePapers: action.payload.papers,
+        abbreviationBank: action.payload.abbreviationBank,
+      }
 
     case 'ERROR':
       return { ...state, status: 'error', error: action.payload }

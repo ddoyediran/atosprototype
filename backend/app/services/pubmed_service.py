@@ -1,7 +1,7 @@
 import logging
 import asyncio
+import re
 from functools import partial
-
 from Bio import Entrez
 import xml.etree.ElementTree as ET
 from typing import List

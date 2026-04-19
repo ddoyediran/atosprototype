@@ -128,7 +128,18 @@ class Citation(BaseModel):
     index: int = Field(..., description="Citation number [1], [2], etc.")
     pmid: str = Field(..., description="PubMed ID being cited")
 
+class AbbreviationPaperRef(BaseModel):
+    paper_index: int = Field(..., description="1-based index of paper in current result set")
+    pmid: str = Field(..., description="PMID where this meaning appears")
+    paper_title: str = Field(..., description="Title of the paper")
 
+class AbbreviationMeaning(BaseModel):
+    full_form: str = Field(..., description="Expanded form of the abbreviation")
+    papers: list[AbbreviationPaperRef] = Field(
+        default_factory=list,
+        description="All papers using this meaning"
+    )
+    
 # Response Models
 class QueryResponse(BaseModel):
     """Complete response model for chat queries."""
@@ -140,6 +151,13 @@ class QueryResponse(BaseModel):
     citations: List[Citation] = Field(
         default_factory=list,
         description="List of citations used in the answer"
+    )
+    abbreviation_bank: dict[str, list[AbbreviationMeaning]] = Field(
+        default_factory=dict,
+        description=(
+            "Abbreviation bank across returned papers. "
+            "Maps abbreviation to one or more meanings with paper linkage."
+        )
     )
     is_follow_up: bool = Field(
         False,

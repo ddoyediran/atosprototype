@@ -1,11 +1,12 @@
 import logging
 import time
 import json
+import re
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
-from app.models.schemas import (QueryRequest, QueryResponse, HealthCheckResponse, Paper, Citation)
+from app.models.schemas import (QueryRequest, QueryResponse, HealthCheckResponse, Paper, Citation, AbbreviationMeaning, AbbreviationPaperRef)
 
 from app.services.pubmed_service import PubMedService
 from app.services.keyword_service import KeyWordExtractor
@@ -97,6 +98,7 @@ async def chat_query(request: QueryRequest):
         # Extract citations and select cited papers
         cited_papers, citations = _extract_citations_and_papers(answer, papers)
 
+        abbreviation_bank = _build_abbreviation_bank(papers)
         # Calculate processing time
         processing_time_ms = int((time.time() - start_time) * 1000)
 
@@ -105,9 +107,11 @@ async def chat_query(request: QueryRequest):
             answer=answer,
             papers=cited_papers,
             citations=citations,
+            abbreviation_bank=abbreviation_bank,
             is_follow_up=is_follow_up,
             papers_reused=papers_reused,
-            processing_time_ms=processing_time_ms
+            processing_time_ms=processing_time_ms,
+            
         )
 
     except HTTPException:
@@ -246,6 +250,61 @@ def _extract_citations_and_papers(answer: str, papers: list[Paper]) -> tuple[lis
     
     return cited_papers, citations
 
+
+def _normalize_meaning_key(text: str) -> str:
+    # Treat minor punctuation/hyphen/case differences as same meaning
+    t = text.lower().strip()
+    t = re.sub(r"[-–—]", " ", t)
+    t = re.sub(r"[^a-z0-9\s]", "", t)
+    t = re.sub(r"\s+", " ", t)
+    return t
+
+def _build_abbreviation_bank(papers: list[Paper]) -> dict[str, list[AbbreviationMeaning]]:
+    bank: dict[str, list[AbbreviationMeaning]] = {}
+
+    for idx, paper in enumerate(papers, 1):
+        if not paper.abbreviations:
+            continue
+
+        for raw_abbr, raw_full in paper.abbreviations.items():
+            abbr = raw_abbr.strip().upper()
+            full = raw_full.strip()
+            if not abbr or not full:
+                continue
+
+            if abbr not in bank:
+                bank[abbr] = []
+
+            meaning_key = _normalize_meaning_key(full)
+
+            existing = None
+            for m in bank[abbr]:
+                if _normalize_meaning_key(m.full_form) == meaning_key:
+                    existing = m
+                    break
+
+            paper_ref = AbbreviationPaperRef(
+                paper_index=idx,
+                pmid=paper.pmid,
+                paper_title=paper.title
+            )
+
+            if existing is None:
+                bank[abbr].append(
+                    AbbreviationMeaning(
+                        full_form=full,
+                        papers=[paper_ref]
+                    )
+                )
+            else:
+                if not any(
+                    p.paper_index == paper_ref.paper_index and p.pmid == paper_ref.pmid
+                    for p in existing.papers
+                ):
+                    existing.papers.append(paper_ref)
+
+    return bank
+
 async def _stream_response(request: QueryRequest) -> AsyncGenerator[str, None]:
     """
     Generator function for streaming chat responses via SSE.
@@ -303,7 +362,9 @@ async def _stream_response(request: QueryRequest) -> AsyncGenerator[str, None]:
 
         # Extract citations and prepare complete paper data
         cited_papers, citations = _extract_citations_and_papers(full_answer, papers)
-
+        
+        abbreviation_bank = _build_abbreviation_bank(papers)
+        
         complete_papers = [
             {
                 "pmid": p.pmid,
@@ -321,7 +382,16 @@ async def _stream_response(request: QueryRequest) -> AsyncGenerator[str, None]:
             for i, p in enumerate(cited_papers)
         ]
 
-        yield _sse_event("complete", {"papers": complete_papers})
+        yield _sse_event(
+            "complete",
+            {
+                "papers": complete_papers,
+                "abbreviation_bank": {
+                    abbr: [entry.model_dump() for entry in entries]
+                    for abbr, entries in abbreviation_bank.items()
+                },
+            },
+        )
         yield _sse_event("done", {})
 
     except Exception as err:
@@ -341,3 +411,4 @@ def _sse_event(event_type: str, data: dict) -> str:
         Formatted SSE string
     """
     return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+
