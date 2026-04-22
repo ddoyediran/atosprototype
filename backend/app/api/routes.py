@@ -252,6 +252,15 @@ def _extract_citations_and_papers(answer: str, papers: list[Paper]) -> tuple[lis
 
 
 def _normalize_meaning_key(text: str) -> str:
+    """
+    Normalize text for consistent meaning comparison in abbreviation bank.
+    
+    Args:
+        text (str): The text to normalize.
+
+    Returns:
+        str: The normalized text.
+    """
     # Treat minor punctuation/hyphen/case differences as same meaning
     t = text.lower().strip()
     t = re.sub(r"[-–—]", " ", t)
@@ -260,6 +269,18 @@ def _normalize_meaning_key(text: str) -> str:
     return t
 
 def _build_abbreviation_bank(papers: list[Paper]) -> dict[str, list[AbbreviationMeaning]]:
+    """
+    Consolidate per-paper abbreviation maps into a single cross-paper bank.
+
+    Args:
+        papers (list): All papers returned for the current query. Each paper's
+                `abbreviations` field is a raw dict of short form -> full form.
+
+    Returns:
+        A dict mapping each uppercased abbreviation to a list of one or more
+        AbbreviationMeaning objects, each carrying the full form and the
+        paper references that use it.
+    """
     bank: dict[str, list[AbbreviationMeaning]] = {}
 
     for idx, paper in enumerate(papers, 1):
