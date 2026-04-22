@@ -98,7 +98,7 @@ async def chat_query(request: QueryRequest):
         # Extract citations and select cited papers
         cited_papers, citations = _extract_citations_and_papers(answer, papers)
 
-        abbreviation_bank = _build_abbreviation_bank(papers)
+        abbreviation_bank = _build_abbreviation_bank(cited_papers)
         # Calculate processing time
         processing_time_ms = int((time.time() - start_time) * 1000)
 
@@ -363,7 +363,7 @@ async def _stream_response(request: QueryRequest) -> AsyncGenerator[str, None]:
         # Extract citations and prepare complete paper data
         cited_papers, citations = _extract_citations_and_papers(full_answer, papers)
         
-        abbreviation_bank = _build_abbreviation_bank(papers)
+        abbreviation_bank = _build_abbreviation_bank(cited_papers)
         
         complete_papers = [
             {
