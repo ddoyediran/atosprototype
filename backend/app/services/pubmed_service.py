@@ -434,43 +434,69 @@ class PubMedService:
     def _extract_long_form(self,candidate: str, acronym: str) -> str | None:
             """
             Extract and validate a minimal long form using backward character
-            alignment (Schwartz-Hearst style) from text before (ABBR).
+            alignment (Schwartz-Hearst style) from text before (ABBR). It then applies heuristics to filter out false positives.
+            Args:
+                candidate (str): The text immediately preceding the parentheses containing the acronym.
+                acronym (str): The acronym for which to find a long form.
+
+            Returns:
+                str | None: The extracted long form, or None if not found.
+
             """
+
+            # Clean candidate text and acronym
             text = candidate.strip().rstrip(" ,;:-")
             short = "".join(ch for ch in acronym.upper() if ch.isalnum())
             if not text or len(short) < 2:
                 return None
 
+            # Start from the end of the candidate text and the end of the acronym, and move backwards to find matches
             short_idx = len(short) - 1
             first_match_idx = -1
 
             for text_idx in range(len(text) - 1, -1, -1):
                 ch = text[text_idx]
+
+                # Skip non-alphanumeric characters in the text
                 if not ch.isalnum():
                     continue
+
+                # Check if characters match (case-insensitive)
                 if ch.upper() == short[short_idx]:
-                    # If a match is in the middle of a token, anchor it to the
-                    # previous acronym letter via the token's first character.
+
+                    # Check if a match is in the middle of a token                    
                     token_start = text_idx
                     while token_start > 0 and text[token_start - 1].isalnum():
                         token_start -= 1
                     in_middle_of_token = token_start < text_idx
-                    if in_middle_of_token and short_idx > 0:
-                        if text[token_start].upper() != short[short_idx - 1]:
+
+                    # If the current match is in the middle of a token
+                    if in_middle_of_token:
+
+                        # if it is the first character of the acronym, keep scanning backward.
+                        if short_idx == 0: 
                             continue
 
+                        # If the first character of the word does not match the previous 
+                        # character in the acronym, skip this match and keep scanning backward.
+                        if short_idx > 0: 
+                            if text[token_start].upper() != short[short_idx - 1]:
+                                continue
+
+                    # If it is the first character of the acronym, record the match position
                     if short_idx == 0:
                         first_match_idx = text_idx
                         break
+
+                    # Move to the previous character in the acronym
                     short_idx -= 1
 
+            # If we didn't find a valid long form, return None
             if first_match_idx < 0:
                 return None
 
-            # Expand to full token containing the first matched character.
+            # Extract the long form starting from the first match index
             start = first_match_idx
-            while start > 0 and text[start - 1].isalnum():
-                start -= 1
 
             long_form = text[start:].strip(" ,;:-")
             if not long_form:
@@ -479,23 +505,20 @@ class PubMedService:
             if "\n" in long_form:
                 return None
 
+            # Heuristic filters to reduce false positives:
+            # Tokenize into word-like units (including hyphenated terms)
             words = re.findall(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*", long_form)
+
+            # Filter out very short or very long expansions
             if len(words) < 2 or len(words) > 8:
                 return None
 
-            short = "".join(ch for ch in acronym.upper() if ch.isalnum())
-            first_alnum = next((ch.upper() for ch in long_form if ch.isalnum()), None)
-            if not first_alnum or first_alnum != short[0]:
-                return None
-
+            # Skip if the long form is not significantly longer than the acronym
             if len(long_form) <= len(acronym) or len(long_form) <= 3:
                 return None
 
-            last_word = re.findall(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*", long_form)
-            if not last_word:
-                return None
-
-            last_word_text = last_word[-1]
+            # Ensure the last letter of the acronym appears in the last word of the long form
+            last_word_text = words[-1]
             last_letter = short[-1]
             if last_letter not in last_word_text.upper():
                 return None
